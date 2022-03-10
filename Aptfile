@@ -1,0 +1,13 @@
+pv
+jq
+wget
+mediainfo
+ffmpeg
+wkhtmltopdf
+python3-dev
+zip
+unzip
+neofetch
+gcc
+cmake
+bash
