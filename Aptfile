@@ -4,4 +4,9 @@ wget
 mediainfo
 ffmpeg
 wkhtmltopdf
-git
+python3-dev
+zip
+unzip
+neofetch
+gcc
+cmake
