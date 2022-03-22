@@ -11,6 +11,9 @@
     Delete the group this cmd is used in.
 
 • `{i}getlink`
+• `{i}getlink r` - `create link with admin approval`
+• `{i}getlink r title_here` - `admin approval with link title`
+• `{i}getlink 10` - `usage limit in new link`
     Get link of group this cmd is used in.
 
 • `{i}create (g|b|c) <group_name> ; <optional-username>`
@@ -82,34 +85,64 @@ async def _(e):
 
 
 @ultroid_cmd(
-    pattern="getlink$",
+    pattern="getlink( (.*)|$)",
     groups_only=True,
     manager=True,
 )
 async def _(e):
     reply = await e.get_reply_message()
+    match = e.pattern_match.group(1).strip()
     if reply and not isinstance(reply.sender, User):
         chat = await reply.get_sender()
     else:
         chat = await e.get_chat()
     if hasattr(chat, "username") and chat.username:
         return await e.eor(f"Username: @{chat.username}")
-    if isinstance(chat, types.Chat):
-        FC = await e.client(GetFullChatRequest(chat.id))
-    elif isinstance(chat, types.Channel):
-        FC = await e.client(GetFullChannelRequest(chat.id))
-    Inv = FC.full_chat.exported_invite
-    if Inv and not Inv.revoked:
-        link = Inv.link
-    else:
+    request, usage, title = None, None, None
+    if match:
+        split = match.split(maxsplit=1)
+        request = bool(split[0] in ["r", "request"])
+        title = "Created by Ultroid"
+        if len(split) > 1:
+            match = split[1]
+            spli = match.split(maxsplit=1)
+            if spli[0].isdigit():
+                usage = int(spli[0])
+            if len(spli) > 1:
+                title = spli[1]
+        elif not request:
+            if match.isdigit():
+                usage = int(match)
+            else:
+                title = match
+        if request and usage:
+            usage = 0
+    if request or title:
         try:
             r = await e.client(
-                ExportChatInviteRequest(e.chat_id),
+                ExportChatInviteRequest(
+                    e.chat_id,
+                    request_needed=request,
+                    usage_limit=usage,
+                    title=title,
+                ),
             )
         except no_admin:
             return await e.eor(get_string("chats_2"), time=10)
         link = r.link
-    await e.eor(f"Link:- {link}")
+    else:
+        if isinstance(chat, types.Chat):
+            FC = await e.client(GetFullChatRequest(chat.id))
+        elif isinstance(chat, types.Channel):
+            FC = await e.client(GetFullChannelRequest(chat.id))
+        else:
+            return
+        Inv = FC.full_chat.exported_invite
+        if Inv and not Inv.revoked:
+            link = Inv.link
+    if link:
+        return await e.eor(f"Link:- {link}")
+    await e.eor("`Failed to getlink!\nSeems like link is inaccessible to you...`")
 
 
 @ultroid_cmd(
